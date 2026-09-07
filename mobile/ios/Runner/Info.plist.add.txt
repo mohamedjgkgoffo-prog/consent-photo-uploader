@@ -1,0 +1,3 @@
+Add this key inside the iOS Runner Info.plist:
+<key>NSPhotoLibraryUsageDescription</key>
+<string>يحتاج التطبيق إلى الوصول للصور التي تختارها لرفعها إلى حسابك.</string>
