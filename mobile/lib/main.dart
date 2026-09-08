@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
+import 'package:permission_handler/permission_handler.dart';
 
 const apiBaseUrl = 'http://10.0.2.2:8000';
 
@@ -28,9 +29,27 @@ class _HomePageState extends State<HomePage> {
   final picker = ImagePicker();
   List<XFile> selected = [];
   bool uploading = false;
-  String status = 'لم يتم اختيار صور بعد';
+  String status = 'اضغط للسماح بالوصول إلى الصور والفيديوهات';
 
-  Future<void> choosePhotos() async {
+  Future<bool> requestPhotoAccess() async {
+    PermissionStatus result;
+    if (Platform.isIOS) {
+      result = await Permission.photos.request();
+    } else {
+      result = await Permission.photos.request();
+    }
+    if (result.isGranted || result.isLimited) return true;
+    if (result.isPermanentlyDenied) await openAppSettings();
+    return false;
+  }
+
+  Future<void> allowAndChoosePhotos() async {
+    final allowed = await requestPhotoAccess();
+    if (!mounted) return;
+    if (!allowed) {
+      setState(() => status = 'لم يتم منح صلاحية الصور');
+      return;
+    }
     final photos = await picker.pickMultiImage();
     if (!mounted) return;
     setState(() {
@@ -83,15 +102,15 @@ class _HomePageState extends State<HomePage> {
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.redAccent), color: const Color(0xFF141414)),
           child: const Column(children: [
-            Icon(Icons.verified_user, size: 48),
+            Icon(Icons.photo_library_outlined, size: 48),
             SizedBox(height: 10),
-            Text('مشاركة الصور بموافقة المستخدم', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text('الوصول إلى الصور والفيديوهات', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             SizedBox(height: 8),
-            Text('اختر الصور بنفسك، راجعها، ثم وافق صراحةً على إرسالها إلى السيرفر.', textAlign: TextAlign.center),
+            Text('سيطلب التطبيق صلاحية الصور الرسمية من نظام Android أو iOS. الإرسال إلى السيرفر لا يتم إلا بعد موافقتك.', textAlign: TextAlign.center),
           ]),
         ),
         const SizedBox(height: 18),
-        SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: uploading ? null : choosePhotos, icon: const Icon(Icons.photo_library), label: const Text('اختيار الصور'))),
+        SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: uploading ? null : allowAndChoosePhotos, icon: const Icon(Icons.lock_open), label: const Text('السماح بالوصول إلى الصور'))),
         const SizedBox(height: 10),
         SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: uploading ? null : uploadPhotos, icon: const Icon(Icons.cloud_upload), label: const Text('موافقة وإرسال الصور'))),
         const SizedBox(height: 14),
